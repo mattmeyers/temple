@@ -8,9 +8,32 @@ import (
 
 // ToString converts a provided value to a string. The
 // %v verb is used with fmt.Sprintf to perform the
-// conversion.
-func ToString(v interface{}) string {
-	return fmt.Sprintf("%v", v)
+// conversion for all types except float32 and float64.
+// In this case %f is used. An optional precision can be
+// passed in this case. Note that the precision must be
+// passed as the first argument.
+func ToString(v interface{}, args ...interface{}) string {
+	// When an argument is provided, the piped value is passed
+	// as the last parameter. In this case, we want to swap
+	// these values so that we can do
+	//      3.450 | ToString 2
+	if len(args) > 0 {
+		v, args[0] = args[0], v
+	}
+
+	var s string
+	switch v.(type) {
+	case float64, float32:
+		fStr := "%f"
+		if len(args) > 0 {
+			fStr = fmt.Sprintf("%%.%df", args[0].(int))
+		}
+
+		s = fmt.Sprintf(fStr, v)
+	default:
+		s = fmt.Sprintf("%v", v)
+	}
+	return s
 }
 
 // Commas adds a comma after every three digits.
@@ -51,6 +74,20 @@ func Commas(s string) (string, error) {
 	return strings.Join(parts, "."), nil
 }
 
+func numCommas(s string) int {
+	n := 0
+	switch l := len(s); {
+	case l < 4:
+		break
+	case s[0] == '-':
+		l--
+		fallthrough
+	default:
+		n = (l - 1) / 3
+	}
+	return n
+}
+
 // IsNumeric determines if the provided string is a
 // valid number. Valid numbers can contains commas to
 // the left of the decimal point.
@@ -78,18 +115,4 @@ func IsNumeric(s string) bool {
 	}
 
 	return true
-}
-
-func numCommas(s string) int {
-	n := 0
-	switch l := len(s); {
-	case l < 4:
-		break
-	case s[0] == '-':
-		l--
-		fallthrough
-	default:
-		n = (l - 1) / 3
-	}
-	return n
 }

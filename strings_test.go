@@ -126,7 +126,7 @@ func TestCommas(t *testing.T) {
 	}
 }
 
-func Test_isNumeric(t *testing.T) {
+func TestIsNumeric(t *testing.T) {
 	type args struct {
 		s string
 	}
@@ -178,6 +178,11 @@ func Test_isNumeric(t *testing.T) {
 		{
 			name: "1,234,567",
 			args: args{s: "1,234,567"},
+			want: true,
+		},
+		{
+			name: "1234567.56",
+			args: args{s: "1234567.56"},
 			want: true,
 		},
 		{
