@@ -3,6 +3,7 @@ package temple
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -11,7 +12,8 @@ import (
 // conversion for all types except float32 and float64.
 // In this case %f is used. An optional precision can be
 // passed in this case. Note that the precision must be
-// passed as the first argument.
+// passed as the first argument. For more control over
+// the formatting, use the printf builtin.
 func ToString(v interface{}, args ...interface{}) string {
 	// When an argument is provided, the piped value is passed
 	// as the last parameter. In this case, we want to swap
@@ -34,6 +36,15 @@ func ToString(v interface{}, args ...interface{}) string {
 		s = fmt.Sprintf("%v", v)
 	}
 	return s
+}
+
+func ToUpper(s string) string {
+	return strings.ToUpper(s)
+}
+
+func ToLower(s string) string {
+	strconv.Itoa(1)
+	return strings.ToLower(s)
 }
 
 // Commas adds a comma after every three digits.
