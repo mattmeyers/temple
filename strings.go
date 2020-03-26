@@ -86,17 +86,17 @@ func Commas(s string) (string, error) {
 }
 
 func numCommas(s string) int {
-	n := 0
-	switch l := len(s); {
-	case l < 4:
-		break
-	case s[0] == '-':
-		l--
-		fallthrough
-	default:
-		n = (l - 1) / 3
+	l := len(s)
+
+	if l < 4 {
+		return 0
 	}
-	return n
+
+	if s[0] == '-' {
+		l--
+	}
+
+	return (l - 1) / 3
 }
 
 // IsNumeric determines if the provided string is a

@@ -5,18 +5,28 @@ import (
 	texttmpl "text/template"
 )
 
+// FuncMap maps template function names to functions. This
+// type mirrors the types with the same name in the
+// text/template and html/template packages. The Text()
+// and HTML() methods can be used respectively to achieve
+// these other FuncMap types.
 type FuncMap map[string]interface{}
 
+// Text casts a temple.FuncMap to a text/template.FuncMap.
 func (f FuncMap) Text() texttmpl.FuncMap {
 	return texttmpl.FuncMap(f)
 }
 
+// HTML casts a temple.FuncMap to a html/template.FuncMap.
 func (f FuncMap) HTML() htmltmpl.FuncMap {
 	return htmltmpl.FuncMap(f)
 }
 
-func MergeFuncMaps(base FuncMap, adds ...FuncMap) FuncMap {
-	for _, a := range adds {
+// MergeFuncMaps combines multiple FuncMap structures. If the same
+// function name is found in multiple FuncMaps, then the last
+// occurence will appear in the resulting FuncMap.
+func MergeFuncMaps(base FuncMap, additions ...FuncMap) FuncMap {
+	for _, a := range additions {
 		for k, v := range a {
 			base[k] = v
 		}
@@ -24,6 +34,7 @@ func MergeFuncMaps(base FuncMap, adds ...FuncMap) FuncMap {
 	return base
 }
 
+// FullFuncMap merges all standard FuncMaps.
 func FullFuncMap() FuncMap {
 	return MergeFuncMaps(
 		StringsFuncs,
@@ -32,30 +43,30 @@ func FullFuncMap() FuncMap {
 	)
 }
 
+// StringsFuncs maps all string related functions provided
+// by temple.
 var StringsFuncs FuncMap = FuncMap{
 	"ToString":  ToString,
 	"Commas":    Commas,
 	"IsNumeric": IsNumeric,
 }
 
+// NumbersFuncs maps all number and math related functions
+// provided by temple.
 var NumbersFuncs FuncMap = FuncMap{
-	// Float64 functions
-	"Max":      Max,
-	"Min":      Min,
-	"SliceMax": SliceMax,
-	"SliceMin": SliceMin,
-	// int functions
-	"IntMax":      IntMax,
-	"IntMin":      IntMin,
-	"IntSliceMax": IntSliceMax,
-	"IntSliceMin": IntSliceMin,
-	// uint functions
-	"UintMax":      UintMax,
-	"UintMin":      UintMin,
-	"UintSliceMax": UintSliceMax,
-	"UintSliceMin": UintSliceMin,
+	"Max":   Max,
+	"Min":   Min,
+	"Ceil":  Ceil,
+	"Floor": Floor,
+	"Mod":   Mod,
+	"Sum":   Sum,
+	"Diff":  Diff,
+	"Mul":   Mul,
+	"Div":   Div,
 }
 
+// ConversionFuncs maps all type conversion related functions
+// provided by temple.
 var ConversionFuncs FuncMap = FuncMap{
 	"ToInt":     ToInt,
 	"ToInt8":    ToInt8,

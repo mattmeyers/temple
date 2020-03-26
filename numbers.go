@@ -1,139 +1,125 @@
 package temple
 
-func SliceMax(vals []float64) float64 {
-	if len(vals) == 0 {
-		return 0
+import (
+	"errors"
+	"math"
+	"reflect"
+)
+
+func Max(arg1 reflect.Value, arg2 ...reflect.Value) (reflect.Value, error) {
+	if arg1.Kind() == reflect.Slice || arg1.Kind() == reflect.Array {
+		l := arg1.Len()
+		if l == 0 {
+			return reflect.Value{}, errors.New("empty slice provided")
+		}
+
+		out := arg1.Index(0)
+		for i := 1; i < l; i++ {
+			ok, err := lt(out, arg1.Index(i))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+
+			if ok {
+				out = arg1.Index(i)
+			}
+		}
+		return out, nil
 	}
 
-	m := vals[0]
-	for _, v := range vals {
-		if v > m {
-			m = v
+	out := arg1
+	for _, a := range arg2 {
+		ok, err := lt(out, a)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		if ok {
+			out = a
 		}
 	}
 
-	return m
+	return out, nil
 }
 
-func IntSliceMax(vals []int) int {
-	if len(vals) == 0 {
-		return 0
+func Min(arg1 reflect.Value, arg2 ...reflect.Value) (reflect.Value, error) {
+	if arg1.Kind() == reflect.Slice || arg1.Kind() == reflect.Array {
+		l := arg1.Len()
+		if l == 0 {
+			return reflect.Value{}, errors.New("empty slice provided")
+		}
+
+		out := arg1.Index(0)
+		for i := 1; i < l; i++ {
+			ok, err := gt(out, arg1.Index(i))
+			if err != nil {
+				return reflect.Value{}, err
+			}
+
+			if ok {
+				out = arg1.Index(i)
+			}
+		}
+		return out, nil
 	}
 
-	m := vals[0]
-	for _, v := range vals {
-		if v > m {
-			m = v
+	out := arg1
+	for _, a := range arg2 {
+		ok, err := gt(out, a)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		if ok {
+			out = a
 		}
 	}
 
-	return m
+	return out, nil
 }
 
-func UintSliceMax(vals []uint) uint {
-	if len(vals) == 0 {
-		return 0
-	}
+func Ceil(f float64) float64 {
+	return math.Ceil(f)
+}
 
-	m := vals[0]
+func Floor(f float64) float64 {
+	return math.Floor(f)
+}
+
+func Mod(x float64, y float64) float64 {
+	return math.Mod(x, y)
+}
+
+func Abs(x float64) float64 {
+	return math.Abs(x)
+}
+
+func Sum(x float64, vals ...float64) float64 {
 	for _, v := range vals {
-		if v > m {
-			m = v
-		}
+		x += v
 	}
-
-	return m
+	return x
 }
 
-func Max(v float64, args ...float64) float64 {
-	if len(args) == 0 {
-		return v
-	}
-
-	return SliceMax(append(args, v))
-}
-
-func IntMax(v int, args ...int) int {
-	if len(args) == 0 {
-		return v
-	}
-
-	return IntSliceMax(append(args, v))
-}
-
-func UintMax(v uint, args ...uint) uint {
-	if len(args) == 0 {
-		return v
-	}
-
-	return UintSliceMax(append(args, v))
-}
-
-func SliceMin(vals []float64) float64 {
-	if len(vals) == 0 {
-		return 0
-	}
-
-	m := vals[0]
+func Diff(x float64, vals ...float64) float64 {
 	for _, v := range vals {
-		if v < m {
-			m = v
-		}
+		x -= v
 	}
-
-	return m
+	return x
 }
 
-func IntSliceMin(vals []int) int {
-	if len(vals) == 0 {
-		return 0
-	}
-
-	m := vals[0]
+func Mul(x float64, vals ...float64) float64 {
 	for _, v := range vals {
-		if v < m {
-			m = v
-		}
+		x *= v
 	}
-
-	return m
+	return x
 }
 
-func UintSliceMin(vals []uint) uint {
-	if len(vals) == 0 {
-		return 0
-	}
-
-	m := vals[0]
+func Div(x float64, vals ...float64) float64 {
 	for _, v := range vals {
-		if v < m {
-			m = v
+		if v == 0 {
+			panic("temple: division by zero")
 		}
+
+		x /= v
 	}
-
-	return m
-}
-
-func Min(f float64, args ...float64) float64 {
-	if len(args) == 0 {
-		return f
-	}
-
-	return SliceMin(append(args, f))
-}
-
-func IntMin(f int, args ...int) int {
-	if len(args) == 0 {
-		return f
-	}
-
-	return IntSliceMin(append(args, f))
-}
-
-func UintMin(f uint, args ...uint) uint {
-	if len(args) == 0 {
-		return f
-	}
-
-	return UintSliceMin(append(args, f))
+	return x
 }
