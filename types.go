@@ -193,3 +193,11 @@ func ToFloat64Slice(vals []interface{}) ([]float64, error) {
 	}
 	return out, nil
 }
+
+func ToStringSlice(vals []interface{}) []string {
+	out := make([]string, len(vals))
+	for i, v := range vals {
+		out[i] = ToString(v)
+	}
+	return out
+}

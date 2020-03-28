@@ -40,6 +40,7 @@ func FullFuncMap() FuncMap {
 		StringsFuncs,
 		NumbersFuncs,
 		ConversionFuncs,
+		CollectionFuncs,
 	)
 }
 
@@ -49,6 +50,7 @@ var StringsFuncs FuncMap = FuncMap{
 	"ToString":  ToString,
 	"Commas":    Commas,
 	"IsNumeric": IsNumeric,
+	"Join":      Join,
 }
 
 // NumbersFuncs maps all number and math related functions
@@ -93,4 +95,12 @@ var ConversionFuncs FuncMap = FuncMap{
 	"ToUint64Slice":  ToUint64Slice,
 	"ToFloat32Slice": ToFloat32Slice,
 	"ToFloat64Slice": ToFloat64Slice,
+}
+
+// CollectionFuncs maps all type conversion related functions
+// provided by temple.
+var CollectionFuncs FuncMap = FuncMap{
+	"NewSlice": NewSlice,
+	"NewSet":   NewSet,
+	"Contains": Contains,
 }

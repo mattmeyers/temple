@@ -127,3 +127,18 @@ func IsNumeric(s string) bool {
 
 	return true
 }
+
+func Join(sep string, a interface{}) (string, error) {
+	var out string
+	switch s := a.(type) {
+	case []string:
+		out = strings.Join(s, sep)
+	case []interface{}:
+		out = strings.Join(ToStringSlice(s), sep)
+	case Slice:
+		out = strings.Join(ToStringSlice(s), sep)
+	default:
+		return "", errors.New("slice of strings required")
+	}
+	return out, nil
+}
