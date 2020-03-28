@@ -56,15 +56,19 @@ var StringsFuncs FuncMap = FuncMap{
 // NumbersFuncs maps all number and math related functions
 // provided by temple.
 var NumbersFuncs FuncMap = FuncMap{
-	"Max":   Max,
-	"Min":   Min,
-	"Ceil":  Ceil,
-	"Floor": Floor,
-	"Mod":   Mod,
-	"Sum":   Sum,
-	"Diff":  Diff,
-	"Mul":   Mul,
-	"Div":   Div,
+	"IntMax":   IntMax,
+	"UintMax":  UintMax,
+	"FloatMax": FloatMax,
+	"IntMin":   IntMin,
+	"UintMin":  UintMin,
+	"FloatMin": FloatMin,
+	"Ceil":     Ceil,
+	"Floor":    Floor,
+	"Mod":      Mod,
+	"Sum":      Sum,
+	"Diff":     Diff,
+	"Mul":      Mul,
+	"Div":      Div,
 }
 
 // ConversionFuncs maps all type conversion related functions

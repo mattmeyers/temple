@@ -3,77 +3,164 @@ package temple
 import (
 	"errors"
 	"math"
-	"reflect"
 )
 
-func Max(arg1 reflect.Value, arg2 ...reflect.Value) (reflect.Value, error) {
-	if arg1.Kind() == reflect.Slice || arg1.Kind() == reflect.Array {
-		l := arg1.Len()
-		if l == 0 {
-			return reflect.Value{}, errors.New("empty slice provided")
-		}
-
-		out := arg1.Index(0)
-		for i := 1; i < l; i++ {
-			ok, err := lt(out, arg1.Index(i))
-			if err != nil {
-				return reflect.Value{}, err
-			}
-
-			if ok {
-				out = arg1.Index(i)
-			}
-		}
-		return out, nil
+func IntMax(arg1 interface{}, arg2 ...interface{}) (int, error) {
+	vals, err := parseIntArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
 	}
 
-	out := arg1
-	for _, a := range arg2 {
-		ok, err := lt(out, a)
-		if err != nil {
-			return reflect.Value{}, err
-		}
-		if ok {
-			out = a
+	max := vals[0]
+	for _, i := range vals {
+		if i > max {
+			max = i
 		}
 	}
-
-	return out, nil
+	return max, nil
 }
 
-func Min(arg1 reflect.Value, arg2 ...reflect.Value) (reflect.Value, error) {
-	if arg1.Kind() == reflect.Slice || arg1.Kind() == reflect.Array {
-		l := arg1.Len()
-		if l == 0 {
-			return reflect.Value{}, errors.New("empty slice provided")
-		}
-
-		out := arg1.Index(0)
-		for i := 1; i < l; i++ {
-			ok, err := gt(out, arg1.Index(i))
-			if err != nil {
-				return reflect.Value{}, err
-			}
-
-			if ok {
-				out = arg1.Index(i)
-			}
-		}
-		return out, nil
+func IntMin(arg1 interface{}, arg2 ...interface{}) (int, error) {
+	vals, err := parseIntArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
 	}
 
-	out := arg1
-	for _, a := range arg2 {
-		ok, err := gt(out, a)
-		if err != nil {
-			return reflect.Value{}, err
-		}
-		if ok {
-			out = a
+	min := vals[0]
+	for _, i := range vals {
+		if i < min {
+			min = i
 		}
 	}
+	return min, nil
+}
 
-	return out, nil
+func parseIntArgs(arg1 interface{}, arg2 ...interface{}) ([]int, error) {
+	var vals []int
+	var err error
+
+	switch v := arg1.(type) {
+	case int:
+		vals, err = ToIntSlice(append([]interface{}{arg1}, arg2...))
+	case Slice:
+		vals, err = ToIntSlice(v)
+	case []interface{}:
+		vals, err = ToIntSlice(v)
+	case []int:
+		vals = v
+	default:
+		err = errors.New("invalid type")
+	}
+
+	return vals, err
+}
+
+func UintMax(arg1 interface{}, arg2 ...interface{}) (uint, error) {
+	vals, err := parseUintArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
+	}
+
+	max := vals[0]
+	for _, i := range vals {
+		if i > max {
+			max = i
+		}
+	}
+	return max, nil
+}
+
+func UintMin(arg1 interface{}, arg2 ...interface{}) (uint, error) {
+	vals, err := parseUintArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
+	}
+
+	min := vals[0]
+	for _, i := range vals {
+		if i < min {
+			min = i
+		}
+	}
+	return min, nil
+}
+
+func parseUintArgs(arg1 interface{}, arg2 ...interface{}) ([]uint, error) {
+	var vals []uint
+	var err error
+
+	switch v := arg1.(type) {
+	case uint:
+		vals, err = ToUintSlice(append([]interface{}{arg1}, arg2...))
+	case Slice:
+		vals, err = ToUintSlice(v)
+	case []interface{}:
+		vals, err = ToUintSlice(v)
+	case []uint:
+		vals = v
+	default:
+		err = errors.New("invalid type")
+	}
+
+	return vals, err
+}
+
+func FloatMax(arg1 interface{}, arg2 ...interface{}) (float64, error) {
+	vals, err := parseFloatArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
+	}
+
+	max := vals[0]
+	for _, i := range vals {
+		max = math.Max(max, i)
+	}
+	return max, nil
+}
+
+func FloatMin(arg1 interface{}, arg2 ...interface{}) (float64, error) {
+	vals, err := parseFloatArgs(arg1, arg2...)
+	if err != nil {
+		return 0, err
+	} else if len(vals) == 0 {
+		return 0, errors.New("empty slice")
+	}
+
+	min := vals[0]
+	for _, i := range vals {
+		min = math.Min(min, i)
+	}
+	return min, nil
+}
+
+func parseFloatArgs(arg1 interface{}, arg2 ...interface{}) ([]float64, error) {
+	var vals []float64
+	var err error
+
+	switch v := arg1.(type) {
+	case float64, float32, int:
+		vals, err = ToFloat64Slice(append([]interface{}{arg1}, arg2...))
+	case Slice:
+		vals, err = ToFloat64Slice(v)
+	case []interface{}:
+		vals, err = ToFloat64Slice(v)
+	case []float64:
+		vals = v
+	default:
+		err = errors.New("invalid type")
+	}
+
+	return vals, err
 }
 
 func Ceil(f float64) float64 {
