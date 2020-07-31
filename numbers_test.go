@@ -60,3 +60,23 @@ func Test_parseIntArgs(t *testing.T) {
 		})
 	}
 }
+
+var vals = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+var res interface{}
+
+func BenchmarkMax(b *testing.B) {
+	var m interface{}
+	for i := 0; i < b.N; i++ {
+		res, _ = Max(vals)
+	}
+	res = m
+}
+
+func BenchmarkIntMax(b *testing.B) {
+	var m int
+	for i := 0; i < b.N; i++ {
+		m, _ = IntMax(vals)
+	}
+	res = m
+}

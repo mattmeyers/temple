@@ -5,6 +5,42 @@ import (
 	"math"
 )
 
+func Max(arg1 interface{}, arg2 ...interface{}) (interface{}, error) {
+	switch v := arg1.(type) {
+	case int, []int:
+		return IntMax(arg1, arg2...)
+	case uint, []uint:
+		return UintMax(arg1, arg2...)
+	case float64, []float64:
+		return FloatMax(arg1, arg2...)
+	case []interface{}:
+		if len(v) == 0 {
+			return nil, errors.New("empty slice provided")
+		}
+		switch v[0].(type) {
+		case int:
+			return IntMax(arg1, arg2...)
+		case uint:
+			return UintMax(arg1, arg2...)
+		case float64:
+			return FloatMax(arg1, arg2...)
+		}
+	case Slice:
+		if len(v) == 0 {
+			return nil, errors.New("empty slice provided")
+		}
+		switch v[0].(type) {
+		case int:
+			return IntMax(arg1, arg2...)
+		case uint:
+			return UintMax(arg1, arg2...)
+		case float64:
+			return FloatMax(arg1, arg2...)
+		}
+	}
+	return nil, errors.New("invalid type")
+}
+
 func IntMax(arg1 interface{}, arg2 ...interface{}) (int, error) {
 	vals, err := parseIntArgs(arg1, arg2...)
 	if err != nil {

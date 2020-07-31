@@ -56,6 +56,7 @@ var StringsFuncs FuncMap = FuncMap{
 // NumbersFuncs maps all number and math related functions
 // provided by temple.
 var NumbersFuncs FuncMap = FuncMap{
+	"Max":      Max,
 	"IntMax":   IntMax,
 	"UintMax":  UintMax,
 	"FloatMax": FloatMax,
