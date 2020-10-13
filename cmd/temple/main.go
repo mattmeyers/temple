@@ -4,18 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	htmpl "html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
+	"path/filepath"
 	ttmpl "text/template"
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
 	"github.com/mattmeyers/temple"
 )
 
@@ -23,7 +18,6 @@ func main() {
 	flag.Usage = usage
 	flagHTML := flag.Bool("html", false, "use html/template for template parsing")
 	flagWatch := flag.Bool("watch", false, "watch input files for changes")
-	flagFuncs := flag.String("funcs", "", "load a Go file to add to the FuncMap")
 	flagData := flag.String("d", "", "a JSON file containing the template data")
 	flagOutput := flag.String("o", "", "the output filename")
 	flag.Parse()
@@ -39,12 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	funcs, err := readFuncsFile(*flagFuncs)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	w, err := getWriter(*flagOutput)
 	if err != nil {
 		fmt.Println(err)
@@ -52,7 +40,7 @@ func main() {
 	}
 	defer w.Close()
 
-	var f func([]string, temple.FuncMap, interface{}, io.Writer) error
+	var f func([]string, interface{}, io.Writer) error
 	if *flagHTML {
 		f = parseHTML
 	} else {
@@ -63,7 +51,7 @@ func main() {
 		fmt.Println("file watching not implement, try again later")
 		os.Exit(1)
 	} else {
-		err = f(flag.Args(), funcs, data, w)
+		err = f(flag.Args(), data, w)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -94,56 +82,6 @@ func readDataFile(filename string) (interface{}, error) {
 	}
 
 	return data, nil
-}
-
-func readFuncsFile(filename string) (temple.FuncMap, error) {
-	if filename == "" {
-		return nil, nil
-	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	buf, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	i := interp.New(interp.Options{})
-
-	i.Use(stdlib.Symbols)
-
-	_, err = i.Eval(string(buf))
-	if err != nil {
-		return nil, err
-	}
-
-	fMap := temple.FuncMap{}
-
-	fset := token.NewFileSet()
-	af, err := parser.ParseFile(fset, "", buf, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	pkgName := af.Name.Name
-
-	for _, decl := range af.Decls {
-		if v, ok := decl.(*ast.FuncDecl); ok {
-			funcName := v.Name.Name
-			fullName := pkgName + "." + funcName
-			fn, err := i.Eval(fullName)
-			if err != nil {
-				return nil, err
-			}
-			fMap[funcName] = fn.Interface()
-		}
-	}
-
-	return fMap, nil
 }
 
 func getWriter(filename string) (io.WriteCloser, error) {
@@ -177,10 +115,8 @@ var passthrough = func(args ...interface{}) interface{} {
 	return args[len(args)-1]
 }
 
-func parseHTML(infiles []string, funcs temple.FuncMap, data interface{}, w io.Writer) error {
-	fMap := temple.MergeFuncMaps(temple.FullFuncMap(), funcs)
-
-	t, err := htmpl.New(infiles[0]).Funcs(fMap.HTML()).ParseFiles(infiles...)
+func parseHTML(infiles []string, data interface{}, w io.Writer) error {
+	t, err := htmpl.New(infiles[0]).Funcs(temple.FullFuncMap().HTML()).ParseFiles(infiles...)
 	if err != nil {
 		return err
 	}
@@ -193,10 +129,10 @@ func parseHTML(infiles []string, funcs temple.FuncMap, data interface{}, w io.Wr
 	return nil
 }
 
-func parseText(infiles []string, funcs temple.FuncMap, data interface{}, w io.Writer) error {
-	fMap := temple.MergeFuncMaps(temple.FullFuncMap(), funcs)
+func parseText(infiles []string, data interface{}, w io.Writer) error {
+	_, name := filepath.Split(infiles[0])
 
-	t, err := ttmpl.New(infiles[0]).Funcs(fMap.Text()).ParseFiles(infiles...)
+	t, err := ttmpl.New(name).Funcs(temple.FullFuncMap().Text()).ParseFiles(infiles...)
 	if err != nil {
 		return err
 	}

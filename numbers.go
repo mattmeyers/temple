@@ -9,8 +9,6 @@ func Max(arg1 interface{}, arg2 ...interface{}) (interface{}, error) {
 	switch v := arg1.(type) {
 	case int, []int:
 		return IntMax(arg1, arg2...)
-	case uint, []uint:
-		return UintMax(arg1, arg2...)
 	case float64, []float64:
 		return FloatMax(arg1, arg2...)
 	case []interface{}:
@@ -20,8 +18,6 @@ func Max(arg1 interface{}, arg2 ...interface{}) (interface{}, error) {
 		switch v[0].(type) {
 		case int:
 			return IntMax(arg1, arg2...)
-		case uint:
-			return UintMax(arg1, arg2...)
 		case float64:
 			return FloatMax(arg1, arg2...)
 		}
@@ -32,11 +28,14 @@ func Max(arg1 interface{}, arg2 ...interface{}) (interface{}, error) {
 		switch v[0].(type) {
 		case int:
 			return IntMax(arg1, arg2...)
-		case uint:
-			return UintMax(arg1, arg2...)
 		case float64:
 			return FloatMax(arg1, arg2...)
 		}
+	case Set:
+		if len(v) == 0 {
+			return nil, errors.New("empty set provided")
+		}
+		return IntMax(arg1, arg2...)
 	}
 	return nil, errors.New("invalid type")
 }
@@ -84,63 +83,18 @@ func parseIntArgs(arg1 interface{}, arg2 ...interface{}) ([]int, error) {
 		vals, err = ToIntSlice(append([]interface{}{arg1}, arg2...))
 	case Slice:
 		vals, err = ToIntSlice(v)
+	case Set:
+		vals = make([]int, len(v))
+		for k := range v {
+			val, err := ToInt(k)
+			if err != nil {
+				return nil, err
+			}
+			vals = append(vals, val)
+		}
 	case []interface{}:
 		vals, err = ToIntSlice(v)
 	case []int:
-		vals = v
-	default:
-		err = errors.New("invalid type")
-	}
-
-	return vals, err
-}
-
-func UintMax(arg1 interface{}, arg2 ...interface{}) (uint, error) {
-	vals, err := parseUintArgs(arg1, arg2...)
-	if err != nil {
-		return 0, err
-	} else if len(vals) == 0 {
-		return 0, errors.New("empty slice")
-	}
-
-	max := vals[0]
-	for _, i := range vals {
-		if i > max {
-			max = i
-		}
-	}
-	return max, nil
-}
-
-func UintMin(arg1 interface{}, arg2 ...interface{}) (uint, error) {
-	vals, err := parseUintArgs(arg1, arg2...)
-	if err != nil {
-		return 0, err
-	} else if len(vals) == 0 {
-		return 0, errors.New("empty slice")
-	}
-
-	min := vals[0]
-	for _, i := range vals {
-		if i < min {
-			min = i
-		}
-	}
-	return min, nil
-}
-
-func parseUintArgs(arg1 interface{}, arg2 ...interface{}) ([]uint, error) {
-	var vals []uint
-	var err error
-
-	switch v := arg1.(type) {
-	case uint:
-		vals, err = ToUintSlice(append([]interface{}{arg1}, arg2...))
-	case Slice:
-		vals, err = ToUintSlice(v)
-	case []interface{}:
-		vals, err = ToUintSlice(v)
-	case []uint:
 		vals = v
 	default:
 		err = errors.New("invalid type")

@@ -2,8 +2,6 @@ package temple
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -14,36 +12,35 @@ import (
 // passed in this case. Note that the precision must be
 // passed as the first argument. For more control over
 // the formatting, use the printf builtin.
-func ToString(v interface{}, args ...interface{}) string {
-	// When an argument is provided, the piped value is passed
-	// as the last parameter. In this case, we want to swap
-	// these values so that we can do
-	//      3.450 | ToString 2
-	if len(args) > 0 {
-		v, args[0] = args[0], v
-	}
+// func ToString(v interface{}, args ...interface{}) string {
+// 	// When an argument is provided, the piped value is passed
+// 	// as the last parameter. In this case, we want to swap
+// 	// these values so that we can do
+// 	//      3.450 | ToString 2
+// 	if len(args) > 0 {
+// 		v, args[0] = args[0], v
+// 	}
 
-	var s string
-	switch v.(type) {
-	case float64, float32:
-		fStr := "%f"
-		if len(args) > 0 {
-			fStr = fmt.Sprintf("%%.%df", args[0].(int))
-		}
+// 	var s string
+// 	switch v.(type) {
+// 	case float64, float32:
+// 		fStr := "%f"
+// 		if len(args) > 0 {
+// 			fStr = fmt.Sprintf("%%.%df", args[0].(int))
+// 		}
 
-		s = fmt.Sprintf(fStr, v)
-	default:
-		s = fmt.Sprintf("%v", v)
-	}
-	return s
-}
+// 		s = fmt.Sprintf(fStr, v)
+// 	default:
+// 		s = fmt.Sprintf("%v", v)
+// 	}
+// 	return s
+// }
 
 func ToUpper(s string) string {
 	return strings.ToUpper(s)
 }
 
 func ToLower(s string) string {
-	strconv.Itoa(1)
 	return strings.ToLower(s)
 }
 
@@ -128,15 +125,22 @@ func IsNumeric(s string) bool {
 	return true
 }
 
-func Join(sep string, a interface{}) (string, error) {
-	var out string
+func Join(sep string, a interface{}) (out string, err error) {
 	switch s := a.(type) {
 	case []string:
 		out = strings.Join(s, sep)
 	case []interface{}:
-		out = strings.Join(ToStringSlice(s), sep)
+		sl, err := ToStringSlice(s)
+		if err != nil {
+			return "", err
+		}
+		out = strings.Join(sl, sep)
 	case Slice:
-		out = strings.Join(ToStringSlice(s), sep)
+		sl, err := ToStringSlice(s)
+		if err != nil {
+			return "", err
+		}
+		out = strings.Join(sl, sep)
 	default:
 		return "", errors.New("slice of strings required")
 	}

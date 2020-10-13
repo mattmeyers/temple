@@ -47,7 +47,6 @@ func FullFuncMap() FuncMap {
 // StringsFuncs maps all string related functions provided
 // by temple.
 var StringsFuncs FuncMap = FuncMap{
-	"ToString":  ToString,
 	"Commas":    Commas,
 	"IsNumeric": IsNumeric,
 	"Join":      Join,
@@ -58,10 +57,8 @@ var StringsFuncs FuncMap = FuncMap{
 var NumbersFuncs FuncMap = FuncMap{
 	"Max":      Max,
 	"IntMax":   IntMax,
-	"UintMax":  UintMax,
 	"FloatMax": FloatMax,
 	"IntMin":   IntMin,
-	"UintMin":  UintMin,
 	"FloatMin": FloatMin,
 	"Ceil":     Ceil,
 	"Floor":    Floor,
@@ -76,30 +73,12 @@ var NumbersFuncs FuncMap = FuncMap{
 // provided by temple.
 var ConversionFuncs FuncMap = FuncMap{
 	"ToInt":     ToInt,
-	"ToInt8":    ToInt8,
-	"ToInt16":   ToInt16,
-	"ToInt32":   ToInt32,
-	"ToInt64":   ToInt64,
-	"ToUint":    ToUint,
-	"Touint8":   Touint8,
-	"ToUint16":  ToUint16,
-	"ToUint32":  ToUint32,
-	"ToUint64":  ToUint64,
-	"ToFloat32": ToFloat32,
 	"ToFloat64": ToFloat64,
+	"ToString":  ToString,
 
 	"ToIntSlice":     ToIntSlice,
-	"ToInt8Slice":    ToInt8Slice,
-	"ToInt16Slice":   ToInt16Slice,
-	"ToInt32Slice":   ToInt32Slice,
-	"ToInt64Slice":   ToInt64Slice,
-	"ToUintSlice":    ToUintSlice,
-	"Touint8Slice":   Touint8Slice,
-	"ToUint16Slice":  ToUint16Slice,
-	"ToUint32Slice":  ToUint32Slice,
-	"ToUint64Slice":  ToUint64Slice,
-	"ToFloat32Slice": ToFloat32Slice,
 	"ToFloat64Slice": ToFloat64Slice,
+	"ToStringSlice":  ToStringSlice,
 }
 
 // CollectionFuncs maps all type conversion related functions
