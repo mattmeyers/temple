@@ -1,20 +1,25 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	htmpl "html/template"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	ttmpl "text/template"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/mattmeyers/temple"
 )
 
 func main() {
+	watch()
 	flag.Usage = usage
 	flagHTML := flag.Bool("html", false, "use html/template for template parsing")
 	flagWatch := flag.Bool("watch", false, "watch input files for changes")
@@ -57,6 +62,95 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func watch() {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+
+	files := []string{"testdata/template1.tmpl", "testdata/template2.tmpl"}
+	go func() {
+		checksumCache := map[string]string{}
+		outfile, err := os.Create("out.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer outfile.Close()
+
+	loop:
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+
+				for _, f := range files {
+					if f != event.Name {
+						continue
+					}
+					checksum, err := md5sum(f)
+					if err != nil {
+						log.Println("error:", err)
+						continue loop
+					}
+					fmt.Println(checksum)
+
+					if checksumCache[f] != checksum {
+						fmt.Println("Parsing and printing")
+						err = parseText(files, nil, outfile)
+						if err != nil {
+							fmt.Println("error:", err)
+							continue loop
+						}
+						if checksum != "" {
+							checksumCache[f] = checksum
+						}
+						outfile.Sync()
+
+						_, err = outfile.Seek(0, 0)
+						if err != nil {
+							log.Fatal(err)
+						}
+					}
+				}
+
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	for _, f := range files {
+		err = watcher.Add(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	<-done
+}
+
+func md5sum(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func usage() {
