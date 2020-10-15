@@ -7,7 +7,6 @@ import (
 	htmpl "html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	ttmpl "text/template"
@@ -17,11 +16,14 @@ import (
 )
 
 var (
-	flagHTML   = flag.Bool("html", false, "use html/template for template parsing")
-	flagWatch  = flag.Bool("w", false, "watch input files for changes")
-	flagData   = flag.String("d", "", "a JSON file containing the template data")
-	flagOutput = flag.String("o", "", "the output filename")
+	flagHTML    = flag.Bool("html", false, "use html/template for template parsing")
+	flagWatch   = flag.Bool("w", false, "watch input files for changes")
+	flagVerbose = flag.Bool("v", false, "show extra log info")
+	flagData    = flag.String("d", "", "a JSON file containing the template data")
+	flagOutput  = flag.String("o", "", "the output filename")
 )
+
+var l *Logger
 
 type parseFunc func([]string, interface{}, io.Writer) error
 
@@ -29,9 +31,10 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	l = newLogger(*flagVerbose)
+
 	if flag.NArg() == 0 {
-		fmt.Println("temple: at least one input file required")
-		os.Exit(1)
+		l.Fatal("temple: at least one input file required")
 	}
 
 	var f parseFunc
@@ -48,22 +51,18 @@ func main() {
 
 	data, err := readDataFile(*flagData)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		l.Fatal(err.Error())
 	}
 
 	w, err := getWriter(*flagOutput)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		l.Fatal(err.Error())
 	}
 	defer w.Close()
 
 	err = f(flag.Args(), data, w)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-
+		l.Fatal(err.Error())
 	}
 }
 
@@ -76,7 +75,7 @@ type files struct {
 func watch(parse parseFunc, fs files) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		l.Fatal(err.Error())
 	}
 	defer watcher.Close()
 
@@ -84,7 +83,7 @@ func watch(parse parseFunc, fs files) {
 		var err error
 		data, err := readDataFile(fs.data)
 		if err != nil {
-			log.Fatalln("error reading data file:", err)
+			l.Fatal("error reading data file:", err)
 		}
 
 		for {
@@ -101,12 +100,12 @@ func watch(parse parseFunc, fs files) {
 				if event.Name == fs.data {
 					data, err = readDataFile(fs.data)
 					if err != nil {
-						log.Printf("error reading data file: %v", err)
+						l.Error("error reading data file: %v", err)
 						continue
 					}
 				}
 
-				log.Printf("Detected change in %s, rebuilding...\n", event.Name)
+				l.Debug("Detected change in %s, rebuilding...\n", event.Name)
 
 				var f *os.File
 				if fs.outfile == "" {
@@ -114,45 +113,45 @@ func watch(parse parseFunc, fs files) {
 				} else {
 					f, err = os.OpenFile(fs.outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 					if err != nil {
-						log.Fatal("error opening outfile:", err)
+						l.Fatal("error opening outfile:", err)
 					}
 				}
 
 				err = parse(fs.templates, data, f)
 				if err != nil {
-					log.Println(err)
+					l.Error(err.Error())
 				}
 
 				if f != os.Stdout {
 					err = f.Close()
 					if err != nil {
-						log.Fatal("error closing outfile:", err)
+						l.Fatal("error closing outfile:", err)
 					}
 				}
 
-				log.Println("Successful rebuild!")
+				l.Debug("Successful rebuild!")
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error while watching:", err)
+				l.Error("error while watching:", err)
 			}
 		}
 	}()
 
 	for _, f := range fs.templates {
-		log.Printf("Watching %s for changes...\n", f)
+		l.Info("Watching %s for changes...\n", f)
 		err = watcher.Add(f)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err.Error())
 		}
 	}
 
 	if fs.data != "" {
-		log.Printf("Watching %s for changes...\n", fs.data)
+		l.Info("Watching %s for changes...\n", fs.data)
 		err = watcher.Add(fs.data)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err.Error())
 		}
 	}
 
@@ -216,7 +215,9 @@ var passthrough = func(args ...interface{}) interface{} {
 }
 
 func parseHTML(infiles []string, data interface{}, w io.Writer) error {
-	t, err := htmpl.New(infiles[0]).Funcs(temple.FullFuncMap().HTML()).ParseFiles(infiles...)
+	_, name := filepath.Split(infiles[0])
+
+	t, err := htmpl.New(name).Funcs(temple.FullFuncMap().HTML()).ParseFiles(infiles...)
 	if err != nil {
 		return err
 	}
