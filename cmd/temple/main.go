@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -18,18 +16,34 @@ import (
 	"github.com/mattmeyers/temple"
 )
 
+var (
+	flagHTML   = flag.Bool("html", false, "use html/template for template parsing")
+	flagWatch  = flag.Bool("w", false, "watch input files for changes")
+	flagData   = flag.String("d", "", "a JSON file containing the template data")
+	flagOutput = flag.String("o", "", "the output filename")
+)
+
+type parseFunc func([]string, interface{}, io.Writer) error
+
 func main() {
-	watch()
 	flag.Usage = usage
-	flagHTML := flag.Bool("html", false, "use html/template for template parsing")
-	flagWatch := flag.Bool("watch", false, "watch input files for changes")
-	flagData := flag.String("d", "", "a JSON file containing the template data")
-	flagOutput := flag.String("o", "", "the output filename")
 	flag.Parse()
 
 	if flag.NArg() == 0 {
 		fmt.Println("temple: at least one input file required")
 		os.Exit(1)
+	}
+
+	var f parseFunc
+	if *flagHTML {
+		f = parseHTML
+	} else {
+		f = parseText
+	}
+
+	if *flagWatch {
+		watch(f, files{templates: flag.Args(), data: *flagData, outfile: *flagOutput})
+		return
 	}
 
 	data, err := readDataFile(*flagData)
@@ -45,44 +59,34 @@ func main() {
 	}
 	defer w.Close()
 
-	var f func([]string, interface{}, io.Writer) error
-	if *flagHTML {
-		f = parseHTML
-	} else {
-		f = parseText
-	}
-
-	if *flagWatch {
-		fmt.Println("file watching not implement, try again later")
+	err = f(flag.Args(), data, w)
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
-	} else {
-		err = f(flag.Args(), data, w)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+
 	}
 }
 
-func watch() {
+type files struct {
+	templates []string
+	data      string
+	outfile   string
+}
+
+func watch(parse parseFunc, fs files) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer watcher.Close()
 
-	done := make(chan bool)
-
-	files := []string{"testdata/template1.tmpl", "testdata/template2.tmpl"}
 	go func() {
-		checksumCache := map[string]string{}
-		outfile, err := os.Create("out.txt")
+		var err error
+		data, err := readDataFile(fs.data)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalln("error reading data file:", err)
 		}
-		defer outfile.Close()
 
-	loop:
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -90,67 +94,69 @@ func watch() {
 					return
 				}
 
-				for _, f := range files {
-					if f != event.Name {
-						continue
-					}
-					checksum, err := md5sum(f)
+				if event.Op&fsnotify.Write != fsnotify.Write {
+					continue
+				}
+
+				if event.Name == fs.data {
+					data, err = readDataFile(fs.data)
 					if err != nil {
-						log.Println("error:", err)
-						continue loop
-					}
-					fmt.Println(checksum)
-
-					if checksumCache[f] != checksum {
-						fmt.Println("Parsing and printing")
-						err = parseText(files, nil, outfile)
-						if err != nil {
-							fmt.Println("error:", err)
-							continue loop
-						}
-						if checksum != "" {
-							checksumCache[f] = checksum
-						}
-						outfile.Sync()
-
-						_, err = outfile.Seek(0, 0)
-						if err != nil {
-							log.Fatal(err)
-						}
+						log.Printf("error reading data file: %v", err)
+						continue
 					}
 				}
 
+				log.Printf("Detected change in %s, rebuilding...\n", event.Name)
+
+				var f *os.File
+				if fs.outfile == "" {
+					f = os.Stdout
+				} else {
+					f, err = os.OpenFile(fs.outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+					if err != nil {
+						log.Fatal("error opening outfile:", err)
+					}
+				}
+
+				err = parse(fs.templates, data, f)
+				if err != nil {
+					log.Println(err)
+				}
+
+				if f != os.Stdout {
+					err = f.Close()
+					if err != nil {
+						log.Fatal("error closing outfile:", err)
+					}
+				}
+
+				log.Println("Successful rebuild!")
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+				log.Println("error while watching:", err)
 			}
 		}
 	}()
 
-	for _, f := range files {
+	for _, f := range fs.templates {
+		log.Printf("Watching %s for changes...\n", f)
 		err = watcher.Add(f)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	<-done
-}
 
-func md5sum(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
+	if fs.data != "" {
+		log.Printf("Watching %s for changes...\n", fs.data)
+		err = watcher.Add(fs.data)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	<-(make(chan struct{}))
 }
 
 func usage() {
