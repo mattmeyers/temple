@@ -15,26 +15,31 @@ import (
 	"github.com/mattmeyers/temple"
 )
 
-var (
-	flagHTML    = flag.Bool("html", false, "use html/template for template parsing")
-	flagWatch   = flag.Bool("w", false, "watch input files for changes")
-	flagVerbose = flag.Bool("v", false, "show extra log info")
-	flagData    = flag.String("d", "", "a JSON file containing the template data")
-	flagOutput  = flag.String("o", "", "the output filename")
-)
-
-var l *Logger
+type app struct {
+	l *logger
+}
 
 type parseFunc func([]string, interface{}, io.Writer) error
 
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]... <BASE TEMPLATE> [TEMPLATE]...\n\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Compile Go templates from the command line\n\n")
+	flag.PrintDefaults()
+}
+
 func main() {
 	flag.Usage = usage
+	flagHTML := flag.Bool("html", false, "use html/template for template parsing")
+	flagWatch := flag.Bool("w", false, "watch input files for changes")
+	flagVerbose := flag.Bool("v", false, "show extra log info")
+	flagData := flag.String("d", "", "a JSON file containing the template data")
+	flagOutput := flag.String("o", "", "the output filename")
 	flag.Parse()
 
-	l = newLogger(*flagVerbose)
+	app := &app{l: newLogger(*flagVerbose)}
 
 	if flag.NArg() == 0 {
-		l.Fatal("temple: at least one input file required")
+		app.l.Fatal("temple: at least one input file required")
 	}
 
 	var f parseFunc
@@ -45,24 +50,24 @@ func main() {
 	}
 
 	if *flagWatch {
-		watch(f, files{templates: flag.Args(), data: *flagData, outfile: *flagOutput})
+		app.watch(f, files{templates: flag.Args(), data: *flagData, outfile: *flagOutput})
 		return
 	}
 
 	data, err := readDataFile(*flagData)
 	if err != nil {
-		l.Fatal(err.Error())
+		app.l.Fatal(err.Error())
 	}
 
 	w, err := getWriter(*flagOutput)
 	if err != nil {
-		l.Fatal(err.Error())
+		app.l.Fatal(err.Error())
 	}
 	defer w.Close()
 
 	err = f(flag.Args(), data, w)
 	if err != nil {
-		l.Fatal(err.Error())
+		app.l.Fatal(err.Error())
 	}
 }
 
@@ -72,10 +77,10 @@ type files struct {
 	outfile   string
 }
 
-func watch(parse parseFunc, fs files) {
+func (a *app) watch(parse parseFunc, fs files) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		l.Fatal(err.Error())
+		a.l.Fatal(err.Error())
 	}
 	defer watcher.Close()
 
@@ -83,7 +88,12 @@ func watch(parse parseFunc, fs files) {
 		var err error
 		data, err := readDataFile(fs.data)
 		if err != nil {
-			l.Fatal("error reading data file:", err)
+			a.l.Fatal("error reading data file: %v", err)
+		}
+
+		err = a.update(parse, fs, data)
+		if err != nil {
+			a.l.Error(err.Error())
 		}
 
 		for {
@@ -100,68 +110,70 @@ func watch(parse parseFunc, fs files) {
 				if event.Name == fs.data {
 					data, err = readDataFile(fs.data)
 					if err != nil {
-						l.Error("error reading data file: %v", err)
+						a.l.Error("error reading data file: %v", err)
 						continue
 					}
 				}
 
-				l.Debug("Detected change in %s, rebuilding...\n", event.Name)
-
-				var f *os.File
-				if fs.outfile == "" {
-					f = os.Stdout
-				} else {
-					f, err = os.OpenFile(fs.outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-					if err != nil {
-						l.Fatal("error opening outfile:", err)
-					}
-				}
-
-				err = parse(fs.templates, data, f)
+				a.l.Debug("Detected change in %s, rebuilding...\n", event.Name)
+				err = a.update(parse, fs, data)
 				if err != nil {
-					l.Error(err.Error())
+					a.l.Error(err.Error())
+				} else {
+					a.l.Debug("Successful rebuild!")
 				}
-
-				if f != os.Stdout {
-					err = f.Close()
-					if err != nil {
-						l.Fatal("error closing outfile:", err)
-					}
-				}
-
-				l.Debug("Successful rebuild!")
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				l.Error("error while watching:", err)
+				a.l.Error("error while watching: %v", err)
 			}
 		}
 	}()
 
 	for _, f := range fs.templates {
-		l.Info("Watching %s for changes...\n", f)
+		a.l.Info("Watching %s for changes...\n", f)
 		err = watcher.Add(f)
 		if err != nil {
-			l.Fatal(err.Error())
+			a.l.Fatal(err.Error())
 		}
 	}
 
 	if fs.data != "" {
-		l.Info("Watching %s for changes...\n", fs.data)
+		a.l.Info("Watching %s for changes...\n", fs.data)
 		err = watcher.Add(fs.data)
 		if err != nil {
-			l.Fatal(err.Error())
+			a.l.Fatal(err.Error())
 		}
 	}
 
 	<-(make(chan struct{}))
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]... <BASE TEMPLATE> [TEMPLATE]...\n\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "Compile Go templates from the command line\n\n")
-	flag.PrintDefaults()
+func (a *app) update(parse parseFunc, fs files, data interface{}) error {
+	var err error
+	var f *os.File
+	if fs.outfile == "" {
+		f = os.Stdout
+	} else {
+		f, err = os.OpenFile(fs.outfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			a.l.Fatal("error opening outfile: %v", err)
+		}
+	}
+
+	// We don't immediately check for this error. Even if an error occurs,
+	// execution can continue. We'll return the error and log it.
+	err = parse(fs.templates, data, f)
+
+	if f != os.Stdout {
+		err = f.Close()
+		if err != nil {
+			a.l.Fatal("error closing outfile: %v", err)
+		}
+	}
+
+	return err
 }
 
 func readDataFile(filename string) (interface{}, error) {
@@ -194,24 +206,6 @@ func getWriter(filename string) (io.WriteCloser, error) {
 	}
 
 	return f, nil
-}
-
-// passthrough represents a pipeline function that does nothing.
-// Parsing templates containing functions not defined in the
-// tmeple library will cause parsing to fail. This function can
-// be used in the FuncMap to nullify these functions.
-//
-// Note: Since this is removes pipeline functions, the resulting
-// output will likely have the incorrect data inserted if it
-// compiles at all.
-var passthrough = func(args ...interface{}) interface{} {
-	for _, a := range args {
-		fmt.Printf("%v: %T\n", a, a)
-	}
-	if len(args) == 0 {
-		return nil
-	}
-	return args[len(args)-1]
 }
 
 func parseHTML(infiles []string, data interface{}, w io.Writer) error {
