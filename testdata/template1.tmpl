@@ -1,2 +1,6 @@
-This is template 1 abcdef
-{{ print "abc" }}
+<ul>
+    {{- range .Prices}}
+    <li>${{. | printf "%.2f" | Commas}}</li>
+    {{- end}}
+</ul>
+{{- template "tos" }}

@@ -159,7 +159,7 @@ func watch(parse parseFunc, fs files) {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [Options] template1 template2...\n\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "Usage: %s [OPTION]... <BASE TEMPLATE> [TEMPLATE]...\n\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "Compile Go templates from the command line\n\n")
 	flag.PrintDefaults()
 }
