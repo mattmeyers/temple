@@ -21,9 +21,9 @@ func Max(arg1 interface{}, arg2 ...interface{}) (interface{}, error) {
 		case float64:
 			return FloatMax(arg1, arg2...)
 		}
-	case Slice:
+	case List:
 		if len(v) == 0 {
-			return nil, errors.New("empty slice provided")
+			return nil, errors.New("empty List provided")
 		}
 		switch v[0].(type) {
 		case int:
@@ -81,7 +81,7 @@ func parseIntArgs(arg1 interface{}, arg2 ...interface{}) ([]int, error) {
 	switch v := arg1.(type) {
 	case int:
 		vals, err = ToIntSlice(append([]interface{}{arg1}, arg2...))
-	case Slice:
+	case List:
 		vals, err = ToIntSlice(v)
 	case Set:
 		vals = make([]int, len(v))
@@ -140,7 +140,7 @@ func parseFloatArgs(arg1 interface{}, arg2 ...interface{}) ([]float64, error) {
 	switch v := arg1.(type) {
 	case float64, float32, int:
 		vals, err = ToFloat64Slice(append([]interface{}{arg1}, arg2...))
-	case Slice:
+	case List:
 		vals, err = ToFloat64Slice(v)
 	case []interface{}:
 		vals, err = ToFloat64Slice(v)

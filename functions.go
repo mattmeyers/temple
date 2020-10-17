@@ -58,9 +58,10 @@ func FullFuncMap() FuncMap {
 // StringsFuncs maps all string related functions provided
 // by temple.
 var StringsFuncs FuncMap = FuncMap{
-	"Commas":    Commas,
-	"IsNumeric": IsNumeric,
-	"Join":      Join,
+	"Commas":     Commas,
+	"IsNumeric":  IsNumeric,
+	"Join":       Join,
+	"FormatMask": FormatMask,
 }
 
 // NumbersFuncs maps all number and math related functions
@@ -95,7 +96,7 @@ var ConversionFuncs FuncMap = FuncMap{
 // CollectionFuncs maps all type conversion related functions
 // provided by temple.
 var CollectionFuncs FuncMap = FuncMap{
-	"NewSlice": NewSlice,
+	"NewList":  NewList,
 	"NewSet":   NewSet,
 	"Contains": Contains,
 }

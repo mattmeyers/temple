@@ -36,7 +36,7 @@ func Test_parseIntArgs(t *testing.T) {
 		},
 		{
 			name:    "Slice collection",
-			args:    args{arg1: NewSlice(1, 2, 3), arg2: nil},
+			args:    args{arg1: NewList(1, 2, 3), arg2: nil},
 			want:    []int{1, 2, 3},
 			wantErr: false,
 		},

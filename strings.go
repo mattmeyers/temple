@@ -135,7 +135,7 @@ func Join(sep string, a interface{}) (out string, err error) {
 			return "", err
 		}
 		out = strings.Join(sl, sep)
-	case Slice:
+	case List:
 		sl, err := ToStringSlice(s)
 		if err != nil {
 			return "", err
@@ -145,4 +145,60 @@ func Join(sep string, a interface{}) (out string, err error) {
 		return "", errors.New("slice of strings required")
 	}
 	return out, nil
+}
+
+// FormatMask applies a mask to the provided string. A mask is a string containing
+// the '#' rune. When processed, each '#' will be replaced by the corresponding
+// rune in the provided string. For example, to format a phone number, use
+//		FormatMask(`(###) ###-####`, "5551234567") -> "(555) 123-4567"
+//
+// To include a literal '#' in the mask, use a raw string and precede the '#'
+// with a '\'. For example:
+//		{{ FormatMask `\##-##` "123" }} -> "#1-23"
+//
+// This function expects the number of '#' runes in the mask to match the number of
+// runes in the provided string. An error will be returned when these lengths
+// do not match.
+func FormatMask(mask string, str string) (string, error) {
+	if len(str) == 0 {
+		return mask, nil
+	}
+
+	mRunes, sRunes := []rune(mask), []rune(str)
+	if len(mRunes) < len(sRunes) {
+		return "", errors.New("mask too short for string")
+	}
+
+	j := 0
+	var escape bool
+	for i := 0; i < len(mRunes); i++ {
+		switch mRunes[i] {
+		case '#':
+			if escape {
+				mRunes = append(mRunes[0:i-1], mRunes[i:]...)
+				escape = false
+				i--
+				continue
+			}
+		case '\\':
+			escape = true
+			continue
+		default:
+			escape = false
+			continue
+		}
+
+		if j >= len(sRunes) {
+			return "", errors.New("too few string characters for mask")
+		}
+
+		mRunes[i] = sRunes[j]
+		j++
+	}
+
+	if j != len(sRunes) {
+		return "", errors.New("unused string characters")
+	}
+
+	return string(mRunes), nil
 }

@@ -2,10 +2,10 @@ package temple
 
 import "errors"
 
-type Slice []interface{}
+type List []interface{}
 
-func NewSlice(vals ...interface{}) Slice {
-	return Slice(vals)
+func NewList(vals ...interface{}) List {
+	return List(vals)
 }
 
 type Set map[interface{}]bool
@@ -21,7 +21,7 @@ func NewSet(vals ...interface{}) Set {
 func Contains(v interface{}, c interface{}) (bool, error) {
 	var in bool
 	switch a := c.(type) {
-	case Slice:
+	case List:
 		for _, e := range a {
 			if e == v {
 				in = true

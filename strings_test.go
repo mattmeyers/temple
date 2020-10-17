@@ -204,3 +204,71 @@ func TestIsNumeric(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatMask(t *testing.T) {
+	type args struct {
+		mask string
+		s    string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "US phone number",
+			args:    args{mask: "(###) ###-####", s: "5551234567"},
+			want:    "(555) 123-4567",
+			wantErr: false,
+		},
+		{
+			name:    "Invalid mask length",
+			args:    args{mask: "#", s: "12"},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Too few string characters",
+			args:    args{mask: "##", s: "1"},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Too many string characters",
+			args:    args{mask: "##", s: "123"},
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "Emoji support",
+			args:    args{mask: "🙁 # #", s: "🙂🙃"},
+			want:    "🙁 🙂 🙃",
+			wantErr: false,
+		},
+		{
+			name:    "Contains #",
+			args:    args{mask: `\##\##abc\#`, s: "12"},
+			want:    "#1#2abc#",
+			wantErr: false,
+		},
+		{
+			name:    "Empty string",
+			args:    args{mask: "mask", s: ""},
+			want:    "mask",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := FormatMask(tt.args.mask, tt.args.s)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FormatMask() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("FormatMask() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
