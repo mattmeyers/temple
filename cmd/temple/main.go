@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	if err := cli.New().WithFuncMap(temple.FullFuncMap()).ClearTextFuncMap().Run(); err != nil {
+	if err := cli.New().WithFuncMap(temple.FullFuncMap()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
