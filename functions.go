@@ -22,11 +22,22 @@ func (f FuncMap) HTML() htmltmpl.FuncMap {
 	return htmltmpl.FuncMap(f)
 }
 
+// Clear empties the FuncMap of all of its values.
+func (f *FuncMap) Clear() { *f = make(FuncMap) }
+
 // MergeFuncMaps combines multiple FuncMap structures. If the same
 // function name is found in multiple FuncMaps, then the last
 // occurence will appear in the resulting FuncMap.
 func MergeFuncMaps(base FuncMap, additions ...FuncMap) FuncMap {
+	if base == nil {
+		base = make(FuncMap)
+	}
+
 	for _, a := range additions {
+		if a == nil {
+			continue
+		}
+
 		for k, v := range a {
 			base[k] = v
 		}
